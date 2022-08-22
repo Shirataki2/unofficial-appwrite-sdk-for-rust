@@ -1,0 +1,29 @@
+use param_macro::SerializeParams;
+
+#[derive(SerializeParams)]
+#[params(rename_all = "camelCase")]
+struct Test<'a, T, const SIZE: usize> {
+    pub code: T,
+    #[params(rename = "Message")]
+    pub message: Option<String>,
+    pub error_type: &'a String,
+    #[params(rename = "apiVersion")]
+    pub version: String,
+}
+
+#[test]
+fn test() {
+    let test: Test<i32, 3> = Test {
+        code: 200,
+        message: Some("OK".to_string()),
+        error_type: &"".to_string(),
+        version: "".to_string(),
+    };
+    let expected = vec![
+        ("code".to_string(), "200".to_string()),
+        ("Message".to_string(), "OK".to_string()),
+        ("errorType".to_string(), "".to_string()),
+        ("apiVersion".to_string(), "".to_string()),
+    ];
+    assert_eq!(expected, test.serialize_params());
+}

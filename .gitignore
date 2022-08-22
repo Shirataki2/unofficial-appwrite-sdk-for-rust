@@ -1,0 +1,5 @@
+/target
+/**/Cargo.lock
+/tests/*.mp4
+/tests/*.jpg
+/tests/*.rs
