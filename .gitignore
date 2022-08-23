@@ -3,3 +3,6 @@
 /tests/*.mp4
 /tests/*.jpg
 /tests/*.rs
+/kcov-*
+/tarpaulin-*.html
+/**/cobertura.xml

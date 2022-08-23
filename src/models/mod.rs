@@ -2,6 +2,7 @@ use std::{fmt, marker::PhantomData};
 
 pub mod account;
 pub mod attribute;
+pub mod avatar;
 pub mod bucket;
 pub mod collection;
 pub mod database;
@@ -10,7 +11,9 @@ pub mod document;
 pub mod execution;
 pub mod file;
 pub mod function;
+pub mod health;
 pub mod index;
+pub mod locale;
 pub mod log;
 pub mod membership;
 pub mod permission;

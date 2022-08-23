@@ -17,6 +17,9 @@ bytes = "1.2.1"
 chrono = { version = "0.4.22", features = ["serde"] }
 derive_more = "0.99.17"
 futures-util = "0.3.23"
+iso639_enum = "0.6.0"
+iso_currency = { version = "0.4.3", features = ["with-serde"] }
+isocountry = "0.3.2"
 log = "0.4.17"
 maplit = "1.0.2"
 mime_guess = "2.0.4"

@@ -1,7 +1,5 @@
 use std::fmt;
 
-use super::{membership::MembershipId, team::TeamId, user::UserId};
-
 #[derive(Debug, Clone, PartialEq, Eq, SmartDefault, Display)]
 pub enum Permission {
     #[default]
@@ -12,13 +10,13 @@ pub enum Permission {
     #[display(fmt = "role:member")]
     Logined,
     #[display(fmt = "user:{_0}")]
-    User(UserId),
+    User(String),
     #[display(fmt = "team:{_0}")]
-    Team(TeamId),
+    Team(String),
     #[display(fmt = "team:{}/{}", "_0.0", "_0.1")]
-    Role((TeamId, String)),
+    Role((String, String)),
     #[display(fmt = "member:{_0}")]
-    Member(MembershipId),
+    Member(String),
 }
 
 pub trait PermissionExt {
@@ -76,15 +74,12 @@ impl<'de> serde::de::Visitor<'de> for PermissionVisitor {
                 let s = s.replace('/', ":");
                 let parts: Vec<&str> = s.split(':').collect();
                 match parts.as_slice() {
-                    ["user", user_id] => Ok(Permission::User(UserId(user_id.to_string()))),
-                    ["team", team_id] => Ok(Permission::Team(TeamId(team_id.to_string()))),
-                    ["team", team_id, role] => Ok(Permission::Role((
-                        TeamId(team_id.to_string()),
-                        role.to_string(),
-                    ))),
-                    ["member", membership_id] => {
-                        Ok(Permission::Member(MembershipId(membership_id.to_string())))
+                    ["user", user_id] => Ok(Permission::User(user_id.to_string())),
+                    ["team", team_id] => Ok(Permission::Team(team_id.to_string())),
+                    ["team", team_id, role] => {
+                        Ok(Permission::Role((team_id.to_string(), role.to_string())))
                     }
+                    ["member", membership_id] => Ok(Permission::Member(membership_id.to_string())),
                     _ => Err(E::custom(format!("invalid permission: {}", s))),
                 }
             }
@@ -107,10 +102,10 @@ fn test_serialize() {
         Permission::Anyone,
         Permission::Guest,
         Permission::Logined,
-        Permission::User(UserId("1".to_string())),
-        Permission::Team(TeamId("2".to_string())),
-        Permission::Role((TeamId("3".to_string()), "4".to_string())),
-        Permission::Member(MembershipId("5".to_string())),
+        Permission::User("1".to_string()),
+        Permission::Team("2".to_string()),
+        Permission::Role(("3".to_string(), "4".to_string())),
+        Permission::Member("5".to_string()),
     ];
 
     let string_perms = vec![

@@ -1,6 +1,9 @@
 pub mod accounts;
+pub mod avatars;
 pub mod databases;
 pub mod functions;
+pub mod health;
+pub mod locales;
 pub mod storages;
 pub mod teams;
 pub mod users;
