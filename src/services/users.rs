@@ -4,6 +4,7 @@ use crate::{
     check_response,
     client::{AppWriteClient, RequestData},
     error::Error,
+    insert_if_some,
     models::{
         log::Log,
         membership::Membership,
@@ -16,34 +17,46 @@ use crate::{
 use super::SearchPayload;
 pub struct UsersService;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct CreateUserPayload {
-    pub user_id: UserId,
-    pub email: String,
-    pub password: String,
-    pub name: Option<String>,
-}
-
-#[derive(Debug, Clone, SerializeParams, Default)]
-#[params(rename_all = "camelCase")]
-pub struct ListLogsPayload {
-    limit: Option<u64>,
-    offset: Option<u64>,
-}
-
 impl UsersService {
     pub async fn create_user(
         client: &AppWriteClient,
-        user: CreateUserPayload,
+        user_id: UserId,
+        email: Option<String>,
+        phone: Option<String>,
+        password: Option<String>,
+        name: Option<String>,
     ) -> Result<User, Error> {
         let url = "/users";
+        let user = serde_json::json!({
+            "userId": user_id,
+            "email": email,
+            "phone": phone,
+            "password": password,
+            "name": name,
+        });
         let response = client
-            .call(
-                Method::POST,
-                url,
-                RequestData::Json(serde_json::to_value(user)?),
-            )
+            .call(Method::POST, url, RequestData::Json(user))
+            .await?;
+        Ok(check_response!(User: response))
+    }
+
+    // TODO: ほかの暗号メソッドでのユーザー作成も実装する
+    pub async fn create_user_with_md5(
+        client: &AppWriteClient,
+        user_id: UserId,
+        email: String,
+        password: String,
+        name: Option<String>,
+    ) -> Result<User, Error> {
+        let url = "/users/md5";
+        let user = serde_json::json!({
+            "userId": user_id,
+            "email": email,
+            "password": password,
+            "name": name,
+        });
+        let response = client
+            .call(Method::POST, url, RequestData::Json(user))
             .await?;
         Ok(check_response!(User: response))
     }
@@ -100,15 +113,14 @@ impl UsersService {
     pub async fn get_logs(
         client: &AppWriteClient,
         user_id: &UserId,
-        payload: ListLogsPayload,
+        offset: Option<u64>,
+        limit: Option<u64>,
     ) -> Result<ListResponse<Log>, Error> {
         let url = format!("/users/{}/logs", user_id);
+        let mut payload = vec![];
+        insert_if_some!(payload => "offset", offset; "limit", limit);
         let response = client
-            .call(
-                Method::GET,
-                &url,
-                RequestData::Params(payload.serialize_params()),
-            )
+            .call(Method::GET, &url, RequestData::Params(payload))
             .await?;
         Ok(check_response!(ListResponse<Log>: response))
     }
@@ -129,12 +141,12 @@ impl UsersService {
         Ok(check_response!(User: response))
     }
 
-    pub async fn update_email_varification(
+    pub async fn update_email_verification(
         client: &AppWriteClient,
         user_id: &UserId,
         activate: bool,
     ) -> Result<User, Error> {
-        let url = format!("/users/{}/varification", user_id);
+        let url = format!("/users/{}/verification", user_id);
         let response = client
             .call(
                 Method::PATCH,
@@ -145,12 +157,12 @@ impl UsersService {
         Ok(check_response!(User: response))
     }
 
-    pub async fn update_phone_varification(
+    pub async fn update_phone_verification(
         client: &AppWriteClient,
         user_id: &UserId,
         activate: bool,
     ) -> Result<User, Error> {
-        let url = format!("/users/{}/varification/phone", user_id);
+        let url = format!("/users/{}/verification/phone", user_id);
         let response = client
             .call(
                 Method::PATCH,

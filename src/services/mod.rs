@@ -8,7 +8,7 @@ pub mod storages;
 pub mod teams;
 pub mod users;
 
-#[derive(Debug, Display, Clone, Serialize, Deserialize)]
+#[derive(Debug, Display, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum CursorDirection {
     #[display(fmt = "before")]
     Before,
@@ -16,11 +16,11 @@ pub enum CursorDirection {
     After,
 }
 
-#[derive(Debug, Display, Clone, Serialize, Deserialize)]
-pub enum OrderType {
-    #[display(fmt = "ASC")]
+#[derive(Debug, Display, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub enum Order {
+    #[display(fmt = "asc")]
     Asc,
-    #[display(fmt = "DESC")]
+    #[display(fmt = "desc")]
     Desc,
 }
 
@@ -31,17 +31,15 @@ pub struct SearchPayload<ID> {
     pub offset: Option<u64>,
     pub cursor: Option<ID>,
     pub cursor_direction: Option<CursorDirection>,
-    pub order_type: Option<OrderType>,
+    pub order_type: Option<Order>,
 }
 
 #[derive(Debug, Clone, Default, SerializeParams)]
 pub struct SearchQueryPayload<ID> {
-    // TODO: add query model
-    pub query: Option<String>,
     pub limit: Option<u64>,
     pub offset: Option<u64>,
     pub cursor: Option<ID>,
     pub cursor_direction: Option<CursorDirection>,
     pub order_attribute: Option<String>,
-    pub order_type: Option<OrderType>,
+    pub order_type: Option<Order>,
 }

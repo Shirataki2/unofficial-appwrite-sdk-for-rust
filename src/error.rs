@@ -8,7 +8,7 @@ pub enum Error {
     #[error("{0}")]
     IOError(#[from] std::io::Error),
     #[error("Error while creating client: {0}")]
-    FailedToClientCreate(#[source] reqwest::Error),
+    FailedToCreateClient(#[source] reqwest::Error),
     #[error("Error while sending request: {0}")]
     Request(#[source] reqwest::Error),
     #[error("Error while parsing response: {0}")]

@@ -6,23 +6,25 @@ use crate::{
     error::Error,
     models::{
         attribute::Attribute,
-        collection::{Collection, CollectionId, CollectionPermission},
+        collection::{Collection, CollectionId},
         database::{Database, DatabaseId},
         document::{Document, DocumentId},
         index::Index,
         permission::Permission,
+        query::Query,
         ListResponse,
     },
+    prelude::IndexType,
 };
 
-use super::{SearchPayload, SearchQueryPayload};
+use super::{Order, SearchPayload};
 
 pub struct DatabasesService;
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateDatabasePayload {
-    pub user_id: DatabaseId,
+    pub database_id: DatabaseId,
     pub name: String,
 }
 
@@ -31,9 +33,17 @@ pub struct CreateDatabasePayload {
 pub struct CreateCollectionPayload {
     pub collection_id: CollectionId,
     pub name: String,
-    pub permission: CollectionPermission,
-    pub read: Vec<Permission>,
-    pub write: Vec<Permission>,
+    pub permissions: Vec<Permission>,
+    pub document_security: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateCollectionPayload {
+    pub name: String,
+    pub permissions: Vec<Permission>,
+    pub document_security: bool,
+    pub enabled: bool,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -41,10 +51,10 @@ pub struct CreateCollectionPayload {
 pub struct CreateIndexPayload {
     pub key: String,
     #[serde(rename = "type")]
-    pub index_type: String,
-    pub attributes: Vec<Attribute>,
+    pub index_type: IndexType,
+    pub attributes: Vec<String>,
     // TODO: add model
-    pub orders: Vec<String>,
+    pub orders: Vec<Order>,
 }
 
 #[derive(Debug, Clone, Serialize, Default)]
@@ -52,16 +62,14 @@ pub struct CreateIndexPayload {
 pub struct CreateDocumentPayload {
     pub document_id: DocumentId,
     pub data: serde_json::Value,
-    pub read: Option<Vec<Permission>>,
-    pub write: Option<Vec<Permission>>,
+    pub permissions: Vec<Permission>,
 }
 
 #[derive(Debug, Clone, Serialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateDocumentPayload {
     pub data: Option<serde_json::Value>,
-    pub read: Option<Vec<Permission>>,
-    pub write: Option<Vec<Permission>>,
+    pub permissions: Vec<Permission>,
 }
 
 impl DatabasesService {
@@ -137,6 +145,43 @@ impl DatabasesService {
         let response = client
             .call(
                 Method::POST,
+                &url,
+                RequestData::Json(serde_json::to_value(payload)?),
+            )
+            .await?;
+        Ok(check_response!(Collection: response))
+    }
+
+    pub async fn get_collection(
+        client: &AppWriteClient,
+        database_id: &DatabaseId,
+        collection_id: &CollectionId,
+    ) -> Result<Collection, crate::error::Error> {
+        let url = format!("/databases/{database_id}/collections/{collection_id}");
+        let response = client.call(Method::GET, &url, RequestData::None).await?;
+        Ok(check_response!(Collection: response))
+    }
+
+    pub async fn delete_collection(
+        client: &AppWriteClient,
+        database_id: &DatabaseId,
+        collection_id: &CollectionId,
+    ) -> Result<(), crate::error::Error> {
+        let url = format!("/databases/{database_id}/collections/{collection_id}");
+        let response = client.call(Method::DELETE, &url, RequestData::None).await?;
+        Ok(check_response!(response))
+    }
+
+    pub async fn update_collection(
+        client: &AppWriteClient,
+        database_id: &DatabaseId,
+        collection_id: &CollectionId,
+        payload: UpdateCollectionPayload,
+    ) -> Result<Collection, crate::error::Error> {
+        let url = format!("/databases/{database_id}/collections/{collection_id}");
+        let response = client
+            .call(
+                Method::PUT,
                 &url,
                 RequestData::Json(serde_json::to_value(payload)?),
             )
@@ -234,12 +279,15 @@ impl DatabasesService {
         Ok(check_response!(response))
     }
 
-    pub async fn create_document(
+    pub async fn create_document<T>(
         client: &AppWriteClient,
         database_id: &DatabaseId,
         collection_id: &CollectionId,
         payload: CreateDocumentPayload,
-    ) -> Result<Document, crate::error::Error> {
+    ) -> Result<Document<T>, crate::error::Error>
+    where
+        T: for<'de> serde::de::Deserialize<'de>,
+    {
         let url = format!("/databases/{database_id}/collections/{collection_id}/documents");
         let response = client
             .call(
@@ -248,45 +296,57 @@ impl DatabasesService {
                 RequestData::Json(serde_json::to_value(payload)?),
             )
             .await?;
-        Ok(check_response!(Document: response))
+        Ok(check_response!(Document<T>: response))
     }
 
-    pub async fn list_documents(
+    pub async fn list_documents<T>(
         client: &AppWriteClient,
         database_id: &DatabaseId,
         collection_id: &CollectionId,
-        payload: SearchQueryPayload<DocumentId>,
-    ) -> Result<ListResponse<Document>, crate::error::Error> {
+        queries: Option<Vec<Query>>,
+    ) -> Result<ListResponse<Document<T>>, crate::error::Error>
+    where
+        T: for<'de> serde::Deserialize<'de>,
+    {
         let url = format!("/databases/{database_id}/collections/{collection_id}/documents");
+        let mut params = vec![];
+        if let Some(query) = queries {
+            for q in query {
+                params.push(("queries[]".into(), q.to_string()));
+            }
+        }
+        println!("{}", params[0].1);
         let response = client
-            .call(
-                Method::GET,
-                &url,
-                RequestData::Params(payload.serialize_params()),
-            )
+            .call(Method::GET, &url, RequestData::Params(params))
             .await?;
-        Ok(check_response!(ListResponse<Document>: response))
+        Ok(check_response!(ListResponse<Document<T>>: response))
     }
 
-    pub async fn get_document(
+    pub async fn get_document<T>(
         client: &AppWriteClient,
         database_id: &DatabaseId,
         collection_id: &CollectionId,
         document_id: &DocumentId,
-    ) -> Result<Document, crate::error::Error> {
+    ) -> Result<Document<T>, crate::error::Error>
+    where
+        T: for<'de> serde::Deserialize<'de>,
+    {
         let url =
             format!("/databases/{database_id}/collections/{collection_id}/documents/{document_id}");
         let response = client.call(Method::GET, &url, RequestData::None).await?;
-        Ok(check_response!(Document: response))
+        Ok(check_response!(Document<T>: response))
     }
 
-    pub async fn update_document(
+    pub async fn update_document<T>(
         client: &AppWriteClient,
         database_id: &DatabaseId,
         collection_id: &CollectionId,
         document_id: &DocumentId,
         payload: UpdateDocumentPayload,
-    ) -> Result<Document, crate::error::Error> {
+    ) -> Result<Document<T>, crate::error::Error>
+    where
+        T: for<'de> serde::Deserialize<'de>,
+    {
         let url =
             format!("/databases/{database_id}/collections/{collection_id}/documents/{document_id}");
         let response = client
@@ -296,7 +356,7 @@ impl DatabasesService {
                 RequestData::Json(serde_json::to_value(payload)?),
             )
             .await?;
-        Ok(check_response!(Document: response))
+        Ok(check_response!(Document<T>: response))
     }
 
     pub async fn delete_document(

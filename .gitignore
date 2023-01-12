@@ -6,3 +6,5 @@
 /kcov-*
 /tarpaulin-*.html
 /**/cobertura.xml
+.env
+/showcase

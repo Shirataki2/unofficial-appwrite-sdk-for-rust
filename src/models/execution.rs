@@ -1,6 +1,5 @@
-use chrono::serde::ts_seconds;
 
-use super::{function::FunctionId, permission::Permission, HasId, ListKey, TimeStamp};
+use super::{function::FunctionId, permission::Permission, Id, ListKey, TimeStamp};
 
 #[derive(Debug, Display, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
 pub struct ExecutionId(pub String);
@@ -33,9 +32,9 @@ pub enum ExecutionTrigger {
 pub struct Execution {
     #[serde(rename = "$id")]
     pub id: ExecutionId,
-    #[serde(rename = "$createdAt", with = "ts_seconds")]
+    #[serde(rename = "$createdAt")]
     pub created_at: TimeStamp,
-    #[serde(rename = "$updatedAt", with = "ts_seconds")]
+    #[serde(rename = "$updatedAt")]
     pub updated_at: TimeStamp,
     #[serde(rename = "$read")]
     pub read_perms: Vec<Permission>,
@@ -54,7 +53,7 @@ impl ListKey for Execution {
     }
 }
 
-impl HasId for Execution {
+impl Id for Execution {
     fn id(&self) -> String {
         self.id.0.clone()
     }

@@ -1,6 +1,5 @@
 use std::net::IpAddr;
 
-use chrono::serde::ts_seconds;
 
 use super::{user::UserId, ListKey, TimeStamp};
 
@@ -13,7 +12,7 @@ pub struct Log {
     pub user_email: String,
     pub mode: String,
     pub ip: IpAddr,
-    #[serde(with = "ts_seconds")]
+    #[serde()]
     pub time: TimeStamp,
     pub os_code: String,
     pub os_name: String,

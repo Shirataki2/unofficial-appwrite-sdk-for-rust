@@ -1,6 +1,5 @@
 use std::net::IpAddr;
 
-use chrono::serde::ts_seconds;
 
 use super::{user::UserId, ListKey, TimeStamp};
 
@@ -18,10 +17,10 @@ impl SessionId {
 pub struct Session {
     #[serde(rename = "$id")]
     pub id: SessionId,
-    #[serde(rename = "$createdAt", with = "ts_seconds")]
+    #[serde(rename = "$createdAt")]
     pub created_at: TimeStamp,
     pub user_id: UserId,
-    #[serde(with = "ts_seconds")]
+    #[serde()]
     pub expire: TimeStamp,
     pub provider: String,
     pub provider_uid: String,

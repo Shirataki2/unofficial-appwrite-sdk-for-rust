@@ -4,7 +4,7 @@ use crate::{
     check_response,
     client::{AppWriteClient, RequestData},
     error::Error,
-    models::health::{Health, HealthAntivirus, HealthQueue, HealthTime},
+    models::health::{Health, HealthAntivirus, HealthTime},
 };
 
 pub struct HealthService;
@@ -34,28 +34,28 @@ impl HealthService {
         Ok(check_response!(HealthTime: response))
     }
 
-    pub async fn get_webhooks(client: &AppWriteClient) -> Result<HealthQueue, Error> {
+    pub async fn get_webhooks(client: &AppWriteClient) -> Result<Health, Error> {
         let url = "/health/webhooks";
         let response = client.call(Method::GET, url, RequestData::None).await?;
-        Ok(check_response!(HealthQueue: response))
+        Ok(check_response!(Health: response))
     }
 
-    pub async fn get_logs(client: &AppWriteClient) -> Result<HealthQueue, Error> {
+    pub async fn get_logs(client: &AppWriteClient) -> Result<Health, Error> {
         let url = "/health/logs";
         let response = client.call(Method::GET, url, RequestData::None).await?;
-        Ok(check_response!(HealthQueue: response))
+        Ok(check_response!(Health: response))
     }
 
-    pub async fn get_certificates(client: &AppWriteClient) -> Result<HealthQueue, Error> {
+    pub async fn get_certificates(client: &AppWriteClient) -> Result<Health, Error> {
         let url = "/health/certificates";
         let response = client.call(Method::GET, url, RequestData::None).await?;
-        Ok(check_response!(HealthQueue: response))
+        Ok(check_response!(Health: response))
     }
 
-    pub async fn get_functions(client: &AppWriteClient) -> Result<HealthQueue, Error> {
+    pub async fn get_functions(client: &AppWriteClient) -> Result<Health, Error> {
         let url = "/health/functions";
         let response = client.call(Method::GET, url, RequestData::None).await?;
-        Ok(check_response!(HealthQueue: response))
+        Ok(check_response!(Health: response))
     }
 
     pub async fn get_local_storage(client: &AppWriteClient) -> Result<Health, Error> {

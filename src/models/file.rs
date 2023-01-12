@@ -1,14 +1,13 @@
 use std::path::Path;
 
-use chrono::serde::ts_seconds;
 use tokio::io::{AsyncReadExt, AsyncSeekExt};
 
-use crate::error::Error;
+use crate::{client::AppWriteClient, error::Error, services::storages::StoragesService};
 
 use super::{
     bucket::{BucketId, FileSize},
     permission::Permission,
-    HasId, ListKey, TimeStamp,
+    Id, ListKey, TimeStamp,
 };
 
 #[derive(Debug, Display, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
@@ -30,14 +29,12 @@ pub struct File {
     #[serde(rename = "$id")]
     pub id: FileId,
     pub bucket_id: BucketId,
-    #[serde(rename = "$createdAt", with = "ts_seconds")]
+    #[serde(rename = "$createdAt")]
     pub created_at: TimeStamp,
-    #[serde(rename = "$updatedAt", with = "ts_seconds")]
+    #[serde(rename = "$updatedAt")]
     pub updated_at: TimeStamp,
-    #[serde(rename = "$read")]
-    pub read_perms: Vec<Permission>,
-    #[serde(rename = "$write")]
-    pub write_perms: Vec<Permission>,
+    #[serde(rename = "$permissions")]
+    pub permissions: Vec<Permission>,
     pub name: String,
     pub signature: String,
     pub mime_type: String,
@@ -46,13 +43,51 @@ pub struct File {
     pub chunks_uploaded: u64,
 }
 
+impl File {
+    pub async fn create(
+        &self,
+        client: &AppWriteClient,
+        input_file: InputFile,
+        permissions: &[Permission],
+    ) -> Result<File, crate::error::Error> {
+        StoragesService::create_file(client, &self.bucket_id, &self.id, input_file, permissions)
+            .await
+    }
+
+    pub async fn get_preview(
+        &self,
+        client: &AppWriteClient,
+    ) -> Result<bytes::Bytes, crate::error::Error> {
+        StoragesService::get_file_preview(client, &self.bucket_id, &self.id).await
+    }
+
+    pub async fn get_download(
+        &self,
+        client: &AppWriteClient,
+    ) -> Result<reqwest::Response, crate::error::Error> {
+        StoragesService::get_file_download(client, &self.bucket_id, &self.id).await
+    }
+
+    pub async fn update(
+        &self,
+        client: &AppWriteClient,
+        permissions: &[Permission],
+    ) -> Result<File, crate::error::Error> {
+        StoragesService::update_file(client, &self.bucket_id, &self.id, permissions).await
+    }
+
+    pub async fn delete(&self, client: &AppWriteClient) -> Result<(), crate::error::Error> {
+        StoragesService::delete_file(client, &self.bucket_id, &self.id).await
+    }
+}
+
 impl ListKey for File {
     fn list_key() -> &'static str {
         "files"
     }
 }
 
-impl HasId for File {
+impl Id for File {
     fn id(&self) -> String {
         self.id.0.clone()
     }

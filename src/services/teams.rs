@@ -38,7 +38,7 @@ impl TeamsService {
     pub async fn create_team(
         client: &AppWriteClient,
         payload: CreateTeamPayload,
-    ) -> Result<ListResponse<Team>, crate::error::Error> {
+    ) -> Result<Team, crate::error::Error> {
         let url = "/teams";
         let response = client
             .call(
@@ -47,7 +47,7 @@ impl TeamsService {
                 RequestData::Json(serde_json::to_value(payload)?),
             )
             .await?;
-        Ok(check_response!(ListResponse<Team>: response))
+        Ok(check_response!(Team: response))
     }
 
     pub async fn list_teams(
@@ -157,12 +157,12 @@ impl TeamsService {
         team_id: &TeamId,
         membership_id: &MembershipId,
         user_id: &UserId,
-        status: bool,
+        secret: String,
     ) -> Result<Membership, crate::error::Error> {
         let url = format!("/teams/{team_id}/memberships/{membership_id}/status");
         let payload = serde_json::json!({
             "user_id": user_id,
-            "status": status
+            "secret": secret
         });
         let response = client
             .call(Method::PATCH, &url, RequestData::Json(payload))

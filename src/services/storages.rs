@@ -1,5 +1,6 @@
 use bytes::Bytes;
 use reqwest::Method;
+use smart_default::SmartDefault;
 
 use crate::{
     check_response,
@@ -19,37 +20,52 @@ pub struct StoragesService;
 
 #[derive(Debug, Clone, Serialize, Deserialize, SmartDefault)]
 #[serde(rename_all = "camelCase")]
-pub struct CreateBucketPayload {
-    pub bucket_id: BucketId,
-    pub name: String,
-    pub permission: Permission,
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    pub read: Vec<Permission>,
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    pub write: Vec<Permission>,
-    #[default = true]
-    pub enabled: bool,
-    pub maximum_file_size: Option<FileSize>,
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    pub allowed_file_extensions: Vec<String>,
-    pub encryption: Option<bool>,
-    pub antivirus: Option<bool>,
+pub enum Compression {
+    Gzip,
+    Zstd,
+    #[default]
+    None,
+}
+
+impl Compression {
+    pub fn is_none(&self) -> bool {
+        matches!(self, Compression::None)
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, SmartDefault)]
 #[serde(rename_all = "camelCase")]
-pub struct UpdateBucketPayload {
+pub struct CreateBucketPayload {
+    pub bucket_id: BucketId,
     pub name: String,
-    pub permission: Permission,
     #[serde(skip_serializing_if = "Vec::is_empty")]
-    pub read: Vec<Permission>,
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    pub write: Vec<Permission>,
+    pub permissions: Vec<Permission>,
+    #[default = true]
+    pub file_security: bool,
     #[default = true]
     pub enabled: bool,
     pub maximum_file_size: Option<FileSize>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub allowed_file_extensions: Vec<String>,
+    #[serde(skip_serializing_if = "Compression::is_none")]
+    pub compression: Compression,
+    pub encryption: Option<bool>,
+    pub antivirus: Option<bool>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateBucketPayload {
+    pub name: String,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub permissions: Vec<Permission>,
+    pub enabled: Option<bool>,
+    pub file_security: Option<bool>,
+    pub maximum_file_size: Option<FileSize>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub allowed_file_extensions: Vec<String>,
+    #[serde(skip_serializing_if = "Compression::is_none")]
+    pub compression: Compression,
     pub encryption: Option<bool>,
     pub antivirus: Option<bool>,
 }
@@ -124,16 +140,12 @@ impl StoragesService {
         bucket_id: &BucketId,
         file_id: &FileId,
         input_file: InputFile,
-        read: &[Permission],
-        write: &[Permission],
+        permissions: &[Permission],
     ) -> Result<File, crate::error::Error> {
         let url = format!("/storage/buckets/{bucket_id}/files", bucket_id = bucket_id);
         let mut form = Vec::new();
-        for r in read.iter() {
-            form.push(("read[]".to_string(), r.to_string()));
-        }
-        for w in write.iter() {
-            form.push(("write[]".to_string(), w.to_string()));
+        for r in permissions.iter() {
+            form.push(("permissions[]".to_string(), r.to_string()));
         }
         form.push(("fileId".to_string(), file_id.to_string()));
         let response = client
@@ -236,8 +248,7 @@ impl StoragesService {
         client: &AppWriteClient,
         bucket_id: &BucketId,
         file_id: &FileId,
-        read: &[Permission],
-        write: &[Permission],
+        permissions: &[Permission],
     ) -> Result<File, crate::error::Error> {
         let url = format!(
             "/storage/buckets/{bucket_id}/files/{file_id}",
@@ -249,8 +260,7 @@ impl StoragesService {
                 Method::PUT,
                 &url,
                 RequestData::Json(serde_json::json!({
-                    "read": read,
-                    "write": write,
+                    "permissions": permissions,
                 })),
             )
             .await?;

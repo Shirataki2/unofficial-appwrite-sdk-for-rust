@@ -1,6 +1,6 @@
 use super::{collection::CollectionId, database::DatabaseId, DataStatus};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(tag = "type", rename_all = "camelCase")]
 pub enum Attribute {
     Boolean(AttributeBoolean),
@@ -9,10 +9,11 @@ pub enum Attribute {
     String(AttributeStringLike),
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(tag = "format", rename_all = "camelCase")]
 pub enum AttributeStringLike {
     Email(AttributeEmail),
+    DateTime(AttributeDateTime),
     Enum(AttributeEnum),
     Url(AttributeUrl),
     Ip(AttributeIp),
@@ -39,14 +40,14 @@ impl Attribute {
         key: &str,
         required: bool,
         default: Option<i64>,
-        min: i64,
-        max: i64,
+        min: Option<i64>,
+        max: Option<i64>,
         is_array: Option<bool>,
     ) -> Self {
         Attribute::Integer(AttributeInteger {
             key: key.to_string(),
             required,
-            default_value: default.unwrap_or_default(),
+            default_value: default,
             is_array: is_array.unwrap_or_default(),
             min,
             max,
@@ -58,14 +59,14 @@ impl Attribute {
         key: &str,
         required: bool,
         default: Option<f64>,
-        min: f64,
-        max: f64,
+        min: Option<f64>,
+        max: Option<f64>,
         is_array: Option<bool>,
     ) -> Self {
         Attribute::Double(AttributeDouble {
             key: key.to_string(),
             required,
-            default_value: default.unwrap_or_default(),
+            default_value: default,
             is_array: is_array.unwrap_or_default(),
             min,
             max,
@@ -97,6 +98,21 @@ impl Attribute {
         is_array: Option<bool>,
     ) -> Self {
         Attribute::String(AttributeStringLike::Email(AttributeEmail {
+            key: key.to_string(),
+            required,
+            default_value: default.unwrap_or_default(),
+            is_array: is_array.unwrap_or_default(),
+            status: DataStatus::default(),
+        }))
+    }
+
+    pub fn new_datetime(
+        key: &str,
+        required: bool,
+        default: Option<String>,
+        is_array: Option<bool>,
+    ) -> Self {
+        Attribute::String(AttributeStringLike::DateTime(AttributeDateTime {
             key: key.to_string(),
             required,
             default_value: default.unwrap_or_default(),
@@ -173,6 +189,7 @@ impl Attribute {
             Attribute::Integer(_) => format!("{}/integer", base),
             Attribute::Double(_) => format!("{}/float", base),
             Attribute::String(AttributeStringLike::Email(_)) => format!("{}/email", base),
+            Attribute::String(AttributeStringLike::DateTime(_)) => format!("{}/datetime", base),
             Attribute::String(AttributeStringLike::Enum(_)) => format!("{}/enum", base),
             Attribute::String(AttributeStringLike::Url(_)) => format!("{}/url", base),
             Attribute::String(AttributeStringLike::Ip(_)) => format!("{}/ip", base),
@@ -185,7 +202,7 @@ impl Attribute {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct AttributeBoolean {
     pub key: String,
     pub status: DataStatus,
@@ -196,7 +213,7 @@ pub struct AttributeBoolean {
     pub default_value: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct AttributeInteger {
     pub key: String,
     pub status: DataStatus,
@@ -204,12 +221,12 @@ pub struct AttributeInteger {
     #[serde(rename = "array")]
     pub is_array: bool,
     #[serde(rename = "default")]
-    pub default_value: i64,
-    pub min: i64,
-    pub max: i64,
+    pub default_value: Option<i64>,
+    pub min: Option<i64>,
+    pub max: Option<i64>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct AttributeDouble {
     pub key: String,
     pub status: DataStatus,
@@ -217,12 +234,12 @@ pub struct AttributeDouble {
     #[serde(rename = "array")]
     pub is_array: bool,
     #[serde(rename = "default")]
-    pub default_value: f64,
-    pub min: f64,
-    pub max: f64,
+    pub default_value: Option<f64>,
+    pub min: Option<f64>,
+    pub max: Option<f64>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct AttributeEmail {
     pub key: String,
     pub status: DataStatus,
@@ -233,7 +250,18 @@ pub struct AttributeEmail {
     pub default_value: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct AttributeDateTime {
+    pub key: String,
+    pub status: DataStatus,
+    pub required: bool,
+    #[serde(rename = "array")]
+    pub is_array: bool,
+    #[serde(rename = "default")]
+    pub default_value: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct AttributeEnum {
     pub key: String,
     pub status: DataStatus,
@@ -245,7 +273,7 @@ pub struct AttributeEnum {
     pub elements: Vec<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct AttributeUrl {
     pub key: String,
     pub status: DataStatus,
@@ -256,7 +284,7 @@ pub struct AttributeUrl {
     pub default_value: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct AttributeIp {
     pub key: String,
     pub status: DataStatus,
@@ -267,7 +295,7 @@ pub struct AttributeIp {
     pub default_value: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct AttributeString {
     pub key: String,
     pub status: DataStatus,

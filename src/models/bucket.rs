@@ -1,6 +1,14 @@
-use chrono::serde::ts_seconds;
 
-use super::{ListKey, TimeStamp};
+use super::{
+    file::{File, FileId, InputFile},
+    permission::Permission,
+    ListKey, ListResponse, TimeStamp,
+};
+
+use crate::{
+    client::AppWriteClient,
+    services::{storages::*, SearchPayload},
+};
 
 #[derive(Debug, Display, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
 pub struct BucketId(pub String);
@@ -20,22 +28,21 @@ impl BucketId {
 pub struct Bucket {
     #[serde(rename = "$id")]
     pub id: BucketId,
-    #[serde(rename = "$createdAt", with = "ts_seconds")]
+    #[serde(rename = "$createdAt")]
     pub created_at: TimeStamp,
-    #[serde(rename = "$updatedAt", with = "ts_seconds")]
+    #[serde(rename = "$updatedAt")]
     pub updated_at: TimeStamp,
+    #[serde(rename = "$permissions")]
+    pub permissions: Vec<Permission>,
+    pub file_security: bool,
     pub name: String,
-    #[serde(with = "ts_seconds")]
-    pub registration: TimeStamp,
-    pub status: bool,
-    #[serde(with = "ts_seconds")]
-    pub password_update: TimeStamp,
-    pub email: String,
-    pub phone: String,
-    pub email_verification: bool,
-    pub phone_verification: bool,
-    // TODO: add preferences model
-    pub prefs: serde_json::Value,
+    pub enabled: bool,
+    pub maximum_file_size: FileSize,
+    pub allowed_file_extensions: Vec<String>,
+    #[serde(skip_serializing_if = "Compression::is_none")]
+    pub compression: Compression,
+    pub encryption: bool,
+    pub antivirus: bool,
 }
 
 impl ListKey for Bucket {
@@ -78,3 +85,61 @@ macro_rules! impl_filesize {
 }
 
 impl_filesize!(u8, u16, u32, u64, usize, i8, i16, i32, i64, isize);
+
+impl Bucket {
+    pub async fn create(
+        client: &AppWriteClient,
+        payload: CreateBucketPayload,
+    ) -> Result<Bucket, crate::error::Error> {
+        StoragesService::create_bucket(client, payload).await
+    }
+
+    pub async fn get(client: &AppWriteClient, id: BucketId) -> Result<Bucket, crate::error::Error> {
+        StoragesService::get_bucket(client, &id).await
+    }
+
+    pub async fn list(
+        client: &AppWriteClient,
+        payload: SearchPayload<BucketId>,
+    ) -> Result<ListResponse<Bucket>, crate::error::Error> {
+        StoragesService::list_buckets(client, payload).await
+    }
+
+    pub async fn update(
+        &self,
+        client: &AppWriteClient,
+        payload: UpdateBucketPayload,
+    ) -> Result<Bucket, crate::error::Error> {
+        StoragesService::update_bucket(client, &self.id, payload).await
+    }
+
+    pub async fn delete(&self, client: &AppWriteClient) -> Result<(), crate::error::Error> {
+        StoragesService::delete_bucket(client, &self.id).await
+    }
+
+    pub async fn create_file(
+        &self,
+        client: &AppWriteClient,
+        file_id: FileId,
+        input_file: InputFile,
+        permissions: &[Permission],
+    ) -> Result<File, crate::error::Error> {
+        StoragesService::create_file(client, &self.id, &file_id, input_file, permissions).await
+    }
+
+    pub async fn list_files(
+        &self,
+        client: &AppWriteClient,
+        payload: SearchPayload<FileId>,
+    ) -> Result<ListResponse<File>, crate::error::Error> {
+        StoragesService::list_files(client, &self.id, payload).await
+    }
+
+    pub async fn get_file(
+        &self,
+        client: &AppWriteClient,
+        file_id: &FileId,
+    ) -> Result<File, crate::error::Error> {
+        StoragesService::get_file(client, &self.id, file_id).await
+    }
+}

@@ -11,33 +11,33 @@ use crate::{
         execution::{Execution, ExecutionId},
         file::InputFile,
         function::{Function, FunctionId},
-        permission::Permission,
-        runtime::Runtime,
         ListResponse,
     },
+    prelude::{BuildId, Variable, VariableId, ExecutionRuntime, Runtime},
 };
 
 use super::SearchPayload;
+
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateFunctionPayload {
     pub function_id: FunctionId,
     pub name: String,
-    pub execute: Vec<Permission>,
-    pub runtime: String,
-    pub vars: Option<HashMap<String, String>>,
+    pub execute: Vec<String>,
+    pub runtime: ExecutionRuntime,
     // TODO: Add event and schedule models
     pub events: Option<Vec<String>>,
     pub schedule: Option<String>,
     pub timeout: Option<u64>,
+    pub enabled: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateFunctionPayload {
     pub name: String,
-    pub execute: Vec<Permission>,
+    pub execute: Vec<String>,
     pub runtime: String,
     pub vars: Option<HashMap<String, String>>,
     // TODO: Add event and schedule models
@@ -271,19 +271,86 @@ impl FunctionsService {
         Ok(check_response!(Execution: response))
     }
 
-    pub async fn retry_build(
+    pub async fn create_build(
         client: &AppWriteClient,
         function_id: &FunctionId,
         deployment_id: &DeploymentId,
-        build_id: &str, // TODO: use BuildId
+        build_id: &BuildId,
     ) -> Result<(), crate::error::Error> {
         let url = format!(
-            "/functions/{function_id}/deployments/{deployment_id}/builds/{build_id}",
-            function_id = function_id,
-            deployment_id = deployment_id,
-            build_id = build_id
+            "/functions/{function_id}/executions/deployments/{deployment_id}/builds/{build_id}",
         );
         let response = client.call(Method::POST, &url, RequestData::None).await?;
+        Ok(check_response!(response))
+    }
+
+    pub async fn create_variable<V>(
+        client: &AppWriteClient,
+        function_id: &FunctionId,
+        key: &str,
+        value: V,
+    ) -> Result<Variable, crate::error::Error>
+    where
+        V: serde::Serialize,
+    {
+        let url = format!("/functions/{function_id}/variables");
+        let payload = serde_json::json!( {
+            "key": key,
+            "value": value,
+        });
+        let response = client
+            .call(Method::POST, &url, RequestData::Json(payload))
+            .await?;
+        Ok(check_response!(Variable: response))
+    }
+
+    pub async fn list_variables(
+        client: &AppWriteClient,
+        function_id: &FunctionId,
+    ) -> Result<ListResponse<Variable>, crate::error::Error> {
+        let url = format!("/functions/{function_id}/variables");
+        let response = client.call(Method::GET, &url, RequestData::None).await?;
+        Ok(check_response!(ListResponse<Variable>: response))
+    }
+
+    pub async fn get_variable(
+        client: &AppWriteClient,
+        function_id: &FunctionId,
+        variable_id: &VariableId,
+    ) -> Result<Variable, crate::error::Error> {
+        let url = format!("/functions/{function_id}/variables/{variable_id}");
+        let response = client.call(Method::GET, &url, RequestData::None).await?;
+        Ok(check_response!(Variable: response))
+    }
+
+    pub async fn update_variable<V>(
+        client: &AppWriteClient,
+        function_id: &FunctionId,
+        variable_id: &VariableId,
+        key: String,
+        value: Option<V>,
+    ) -> Result<Variable, crate::error::Error>
+    where
+        V: serde::Serialize,
+    {
+        let url = format!("/functions/{function_id}/variables/{variable_id}");
+        let payload = serde_json::json!( {
+            "key": key,
+            "value": value,
+        });
+        let response = client
+            .call(Method::PUT, &url, RequestData::Json(payload))
+            .await?;
+        Ok(check_response!(Variable: response))
+    }
+
+    pub async fn delete_variable(
+        client: &AppWriteClient,
+        function_id: &FunctionId,
+        variable_id: &VariableId,
+    ) -> Result<(), crate::error::Error> {
+        let url = format!("/functions/{function_id}/variables/{variable_id}");
+        let response = client.call(Method::DELETE, &url, RequestData::None).await?;
         Ok(check_response!(response))
     }
 }

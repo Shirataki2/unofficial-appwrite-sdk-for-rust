@@ -6,10 +6,11 @@ use crate::{
     error::Error,
     insert_if_some,
     models::{
+        account::Token,
         log::Log,
         session::{Session, SessionId},
         user::{User, UserId},
-        ListResponse, account::Token,
+        ListResponse,
     },
 };
 pub struct AccountsService;
@@ -229,9 +230,7 @@ impl AccountsService {
             .call(
                 Method::POST,
                 api_url,
-                RequestData::Json(serde_json::json!({
-                    "url": url
-                })),
+                RequestData::Json(serde_json::json!({ "url": url })),
             )
             .await?;
         Ok(check_response!(Token: response))
@@ -260,16 +259,10 @@ impl AccountsService {
         Ok(check_response!(Token: response))
     }
 
-    pub async fn create_phone_verification(
-        client: &AppWriteClient,
-    ) -> Result<Token, Error> {
+    pub async fn create_phone_verification(client: &AppWriteClient) -> Result<Token, Error> {
         let api_url = "/account/verification/phone";
         let response = client
-            .call(
-                Method::POST,
-                api_url,
-                RequestData::None,
-            )
+            .call(Method::POST, api_url, RequestData::None)
             .await?;
         Ok(check_response!(Token: response))
     }

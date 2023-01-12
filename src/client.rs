@@ -3,7 +3,7 @@ use crate::{
     error::Error,
     models::{
         file::{File, InputFile},
-        HasId,
+        Id,
     },
 };
 
@@ -26,11 +26,11 @@ impl Default for AppWriteClientHeader {
         let mut headers = HeaderMap::new();
         headers.insert(
             "x-sdk-version",
-            HeaderValue::from_static("appwrite:rust:0.1.0"),
+            HeaderValue::from_static("appwrite:rust:1.2.0"),
         );
         headers.insert(
             "X-Appwrite-Response-Format",
-            HeaderValue::from_static("0.15.0"),
+            HeaderValue::from_static("1.2.0"),
         );
         AppWriteClientHeader(headers)
     }
@@ -57,6 +57,10 @@ pub struct AppWriteClient {
 }
 
 impl AppWriteClient {
+    pub fn builder(host_url: &str, project_id: &str) -> AppWriteClientBuilder {
+        AppWriteClientBuilder::new(host_url, project_id)
+    }
+
     pub fn get_host_url(&self) -> &str {
         &self.host_url
     }
@@ -104,7 +108,7 @@ impl AppWriteClient {
         upload_id: Option<String>,
     ) -> Result<Option<Resp>, Error>
     where
-        Resp: serde::de::DeserializeOwned + HasId,
+        Resp: serde::de::DeserializeOwned + Id,
     {
         let url = format!("{}{}", self.host_url, url);
         let filename = input_file.name.clone();
@@ -130,8 +134,8 @@ impl AppWriteClient {
             form = form.part(key.clone(), fileform);
 
             let resp = req.multipart(form).send().await?;
-            check_response!(resp);
-            let resp = resp.json::<Resp>().await?;
+            let resp = check_response!(Resp: resp);
+            // let resp = resp.json::<Resp>().await?;
             Ok(Some(resp))
         } else {
             let mut offset = 0;
@@ -274,7 +278,7 @@ impl AppWriteClientBuilder {
     pub fn build(self) -> Result<AppWriteClient, Error> {
         let mut headers = self.headers.clone();
         headers.add_header(
-            "x-appwrite-project",
+            "X-Appwrite-Project",
             HeaderValue::from_str(&self.project_id)?,
         );
 
@@ -282,7 +286,7 @@ impl AppWriteClientBuilder {
             .gzip(true)
             .default_headers(headers.0)
             .build()
-            .map_err(Error::FailedToClientCreate)?;
+            .map_err(Error::FailedToCreateClient)?;
         Ok(AppWriteClient {
             client,
             project_id: self.project_id,

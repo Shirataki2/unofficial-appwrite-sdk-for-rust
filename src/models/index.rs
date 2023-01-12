@@ -1,14 +1,23 @@
-use super::{attribute::Attribute, DataStatus, ListKey};
+use crate::prelude::Order;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+use super::{DataStatus, ListKey};
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub enum IndexType {
+    Key,
+    Fulltext,
+    Unique,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Index {
     pub key: String,
     #[serde(rename = "type")]
-    pub index_type: String,
+    pub index_type: IndexType,
     pub status: DataStatus,
-    pub attributes: Vec<Attribute>,
-    // TODO: add model
-    pub indexes: Vec<String>,
+    pub attributes: Vec<String>,
+    pub orders: Vec<Order>,
 }
 
 impl ListKey for Index {

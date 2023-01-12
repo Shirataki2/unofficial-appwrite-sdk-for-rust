@@ -1,7 +1,6 @@
-use chrono::serde::ts_seconds;
 use serde_enum_str::*;
 
-use super::{HasId, ListKey, TimeStamp};
+use super::{Id, ListKey, TimeStamp};
 
 #[derive(Debug, Display, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
 pub struct DeploymentId(pub String);
@@ -9,6 +8,23 @@ pub struct DeploymentId(pub String);
 impl DeploymentId {
     pub fn new(id: String) -> Self {
         DeploymentId(id)
+    }
+
+    pub fn unique() -> Self {
+        DeploymentId("unique()".to_string())
+    }
+}
+
+#[derive(Debug, Display, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
+pub struct BuildId(pub String);
+
+impl BuildId {
+    pub fn new(id: String) -> Self {
+        BuildId(id)
+    }
+
+    pub fn unique() -> Self {
+        BuildId("unique()".to_string())
     }
 }
 
@@ -26,9 +42,9 @@ pub enum DeploymentStatus {
 pub struct Deployment {
     #[serde(rename = "$id")]
     pub id: DeploymentId,
-    #[serde(rename = "$createdAt", with = "ts_seconds")]
+    #[serde(rename = "$createdAt")]
     pub created_at: TimeStamp,
-    #[serde(rename = "$updatedAt", with = "ts_seconds")]
+    #[serde(rename = "$updatedAt")]
     pub updated_at: TimeStamp,
     pub resource_id: String, // TODO: Change string to ResourceId
     pub resource_type: String,
@@ -47,7 +63,7 @@ impl ListKey for Deployment {
     }
 }
 
-impl HasId for Deployment {
+impl Id for Deployment {
     fn id(&self) -> String {
         self.id.0.clone()
     }

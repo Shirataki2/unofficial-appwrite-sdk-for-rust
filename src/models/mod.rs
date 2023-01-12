@@ -8,6 +8,7 @@ pub mod collection;
 pub mod database;
 pub mod deployment;
 pub mod document;
+pub mod event;
 pub mod execution;
 pub mod file;
 pub mod function;
@@ -17,12 +18,43 @@ pub mod locale;
 pub mod log;
 pub mod membership;
 pub mod permission;
+pub mod query;
 pub mod runtime;
 pub mod session;
 pub mod team;
 pub mod user;
+pub mod variable;
 
-pub type TimeStamp = chrono::DateTime<chrono::Utc>;
+pub mod prelude {
+    pub use super::{DataStatus, ErrorResponse, ListResponse, TimeStamp};
+    pub use crate::models::account::*;
+    pub use crate::models::attribute::*;
+    pub use crate::models::avatar::*;
+    pub use crate::models::bucket::*;
+    pub use crate::models::collection::*;
+    pub use crate::models::database::*;
+    pub use crate::models::deployment::*;
+    pub use crate::models::document::*;
+    pub use crate::models::execution::*;
+    pub use crate::models::file::*;
+    pub use crate::models::function::*;
+    pub use crate::models::health::*;
+    pub use crate::models::index::*;
+    pub use crate::models::locale::*;
+    pub use crate::models::log::*;
+    pub use crate::models::membership::*;
+    pub use crate::models::permission::*;
+    pub use crate::models::query::*;
+    pub use crate::models::runtime::*;
+    pub use crate::models::session::*;
+    pub use crate::models::team::*;
+    pub use crate::models::user::*;
+    pub use crate::models::variable::*;
+}
+
+
+
+pub type TimeStamp = chrono::DateTime<chrono::Local>;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ErrorResponse {
@@ -33,7 +65,7 @@ pub struct ErrorResponse {
     pub version: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub enum DataStatus {
     Available,
@@ -210,6 +242,6 @@ fn test_deserialize() {
     assert_eq!(expected, list);
 }
 
-pub trait HasId {
+pub trait Id {
     fn id(&self) -> String;
 }
